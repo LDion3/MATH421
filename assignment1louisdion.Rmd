@@ -1,0 +1,246 @@
+---
+title: 'Assignment 1: Data Wrangling With Base R'
+author: "Louis Dion"
+date: "September 9, 2019"
+output:
+  pdf_document: default
+  html_document: default
+  word_document: default
+---
+# Part 1 - R Basics
+## 1. Calculate the following sums.
+
+```{r}
+x<-c(1:2019)
+s1<-sum(x)
+s1
+s2<-sum(x^3)
+s2
+s3<-sum(x^x)
+s3
+y<-x*c(1,-1)
+s4<-sum(y^x)
+s4
+s5<-sum((1/(x^2)))
+s5
+s6<-sum((1/x))
+s6
+s7<-sum((1/(x^3)))
+s7
+s8<-sum((1/y))
+s8
+```
+## 2. Rnorm 1000 samples of mean 10 and sd 1
+```{r}
+x<-rnorm(1000,mean=10,sd=1)
+```
+
+### a. mean and standard deviation
+```{r}
+mean(x)
+sd(x)
+```
+### b. How many do you think are greater than 10? Check estimation. 
+I believe there are 500 samples that are greater than 10.
+```{r}
+y<-x>10
+sum(y)
+```
+### c. Histogram of sample
+```{r}
+hist(x)
+```
+### .d Estimate P(x>1) for N(2,1)
+```{r}
+z<-rnorm(1000, mean=2, sd=1)
+w<-z>1
+sum(w)/1000
+```
+## 3. Tossing a fair dice
+### a. Generate sample of 1000 values with replacment
+```{r}
+x<-sample(c(1:6),1000,replace=TRUE)
+x
+```
+### b. mean and sd of sample
+```{r}
+mean(x)
+sd(x)
+```
+### c. how many times 6 occurs
+```{r}
+y<-x==6
+sum(y)
+```
+### d. Table function to show frequency of values
+```{r}
+table(x)
+```
+
+### e. Relative Frequency of values
+```{r}
+prop.table(table(x))
+```
+### f. Plot Frequency of values
+```{r}
+hist(x)
+```
+## 4. Experiment tossing 3 dice
+```{r}
+X1<-sample(c(1:6),1000,replace=TRUE)
+X2<-sample(c(1:6),1000,replace=TRUE)
+X3<-sample(c(1:6),1000,replace=TRUE)
+```
+### a. P(X1>X2+X3) 
+```{r}
+y<-X1>(X2+X3)
+sum(y)/1000
+```
+
+### b. (P(X1^2>X2^2+X3^2))
+```{r}
+z<- X1^2>X2^2+X3^2
+sum(z)
+```
+## 5. Estimate probability of 3 tails in a row (using matrix)
+```{r}
+x<- matrix(sample(c(0,1),3000,replace=TRUE), (nrows=1000))
+y<-rowSums(x)==3
+sum(y)/1000
+```
+## 6. Extra Credit
+
+## 7. Central Limit Theorem
+### Generate 100 samples of 1000 observations
+```{r}
+A<-matrix(sample(runif(n=10^5,min=0,max=1)),(nrows=100))
+```
+### Means of each sample
+```{r}
+x<-rowSums(A)/1000
+```
+### Plot histogram of x
+```{r}
+hist(x)
+```
+#### yes, the distribution looks normal
+### Up the numbers (500 samples of 2000 observations)
+```{r}
+A<-matrix(sample(runif(n=10^6,min=0,max=1)),(nrows=500))
+x<-rowSums(A)/1000
+hist(x)
+```
+#### This distribution looks more normal
+### Two more distributions 
+#### Exponential Distribution (n=1000, lambda rate=.2) per sample
+```{r}
+A<-matrix(sample(rexp(n=10^5,rate=.2)),(nrows=100))
+x<-rowSums(A)/1000
+hist(x)
+```
+##### histogram looks relatively normal
+#### Poisson distribution (n=1000, lambda=.2) per sample
+```{r}
+A<-matrix(sample(rpois(n=10^5,lambda=.2)),(nrows=100))
+x<-rowSums(A)/1000
+hist(x)
+```
+##### histogram looks normal
+# Part 2 - Working with Data
+## 7. Read in titanic dataset. Use str to see summary
+```{r}
+titanic<-read.csv(file='C:/Users/student/Documents/MATH421/data/titanic.csv', header=TRUE, sep=',')
+str(titanic)
+```
+##8. Print first 10 rows in markdown
+```{r}
+library(kableExtra)
+knitr::kable(titanic[1:10,], format='markdown')
+```
+##9. Count missing values in data, count missing values in each columns
+```{r}
+x<-is.na(titanic)
+sum(x)
+colSums(x)
+```
+##10. Average Age of passengers
+```{r}
+colMeans(titanic['Age'],na.rm=TRUE)
+```
+##11. Replace missing values by the mean
+```{r}
+titanicreplace<-replace(titanic, is.na(titanic),colMeans(titanic['Age'],na.rm=TRUE))
+```
+##12. Remove Name, ID, Ticket, Cabin
+```{r}
+newtitanic<-titanicreplace[-c(1,4,9,11)]
+```
+##13. Mean age of female passengers
+```{r}
+femtitanic<-subset(newtitanic, Sex=='female')
+colMeans(femtitanic['Age'])
+```
+##14. Median fare of class 1 Passengers
+```{r}
+classone<-subset(newtitanic, Pclass==1)
+classfare<-classone$Fare
+median(classfare)
+```
+##15. Median fare of non Class 1 female passengers
+```{r}
+nonclassfemale<-subset(newtitanic, Pclass!=1 & Sex=='female')
+nonclassfemalefare<-nonclassfemale$Fare
+median(nonclassfemalefare)
+```
+##16. Calculate the median age of survived passengers who are female and Class 1 or Class 2
+```{r}
+survfemnon3<-subset(newtitanic,Pclass!=3 & Sex=='female' & Survived==1)
+survfemnon3age<-survfemnon3$Age
+median(survfemnon3age)
+```
+##17. Calculate the mean fare of female teenagers survived passengers
+```{r}
+femteensurv<-subset(newtitanic,Sex=='female' & Survived==1 & Age>=13 & Age <20)
+colMeans(femteensurv['Fare'])
+```
+##18. Calculate the mean fare of female teenagers survived passengers for each class
+```{r}
+femteensurv<-subset(newtitanic,Sex=='female' & Survived==1 & Age>=13 & Age <20)
+means<-aggregate(femteensurv['Fare'],list(femteensurv$Pclass),mean)
+means
+```
+##19. . Calculate the ratio of Survived and not Survived for passengers who pays more than the average fare
+```{r}
+abovefare<-newtitanic[newtitanic['Fare']>mean(newtitanic$Fare,na.rm=TRUE),]
+abovefare #shows there are 211 rows in the abovefare dataset
+sum(abovefare['Survived'])/(211-sum(abovefare['Survived'])) #ratio of survived to not survived aka there are 1.48 people who survived to 1 person who did not survive
+```
+##20. . Add column that standardizes the fare (subtract the mean and divide by standard deviation) and name it sfare
+```{r}
+newtitanic$sfare<-(newtitanic$Fare-mean(newtitanic$Fare,na.rm=TRUE))/sd(newtitanic$Fare,na.rm=TRUE)
+```
+
+##21. Add categorical variable named cfare that takes value cheap for passengers paying less the average fare and takes value expensive for passengers paying more than the average fare.
+```{r}
+newtitanic$cfare<-ifelse(newtitanic$Fare<mean(newtitanic$Fare,na.rm=TRUE),'Cheap','Expensive')
+```
+##22. Add categorical variable named cage that takes value 0 for age 0-10, 1 for age 10-20, 2 for age 20-30, and so on
+```{r}
+newtitanic$cage<-99
+newtitanic$cage[newtitanic$Age<10]<-0
+newtitanic$cage[newtitanic$Age>=10&newtitanic$Age<20]<-1
+newtitanic$cage[newtitanic$Age>=20&newtitanic$Age<30]<-2
+newtitanic$cage[newtitanic$Age>=30&newtitanic$Age<40]<-3
+newtitanic$cage[newtitanic$Age>=40&newtitanic$Age<50]<-4
+newtitanic$cage[newtitanic$Age>=50&newtitanic$Age<60]<-5
+newtitanic$cage[newtitanic$Age>=60&newtitanic$Age<70]<-6
+newtitanic$cage[newtitanic$Age>=70&newtitanic$Age<80]<-7
+newtitanic$cage[newtitanic$Age>=80]<-8
+newtitanic
+```
+##23. Show the frequency of Ports of Embarkation. It appears that there are two missing values in the Embarked variable. Assign the most frequent port to the missing ports. Hint: Use the levels function to modify the categories of categorical variables.
+```{r}
+table(newtitanic$Embarked)#Check most frequent port in the dataset
+newtitanic$Embarked[newtitanic$Embarked=='']<-'S'
+table(newtitanic$Embarked)
+```
