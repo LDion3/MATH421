@@ -1,0 +1,201 @@
+---
+output: # rmarkdown::github_document
+  pdf_document: default
+  word_document: default
+  html_document:
+title: "Assignment 3.  Data Wrangling with Dplyr"
+author: "Louis Dion"
+date: "September 22, 2019"
+---
+This assignment assumes that you have taken the `Introduction to the Tidyverse
+` and `Data Manipulation with dplyr in R` course at Datacamp. You can use base R functions and dplyr functions in the assignment.
+
+***Submission Instruction***.  You will need to submit on **Blackboard**, in the **Assignment** section, the follows:
+
+- A knitted pdf
+- A link to the markdown document in your Github
+- A link to the pdf document in your Github
+
+Questions
+---
+
+1. Read the `titanic` data set as a tibble. Redo questions 13 to 23 in the Assignment 1 using `dplyr`. **Notice:** you may want to use logical operators such as: 
+
+|Operators|Discription|
+|-------|--------------|
+| !=    | not equal to |
+| !x    | Not x        |
+| x \text{|} y | x OR y|
+| x & y | x AND y      |
+# Read in titanic dataset, bring in dplyr
+```{r}
+titanic<-read.csv(file='C:/Users/student/Documents/MATH421/data/titanic.csv', header=TRUE, sep=',')
+library(dplyr)
+```
+#13. Mean age female passengers
+```{r}
+titanic%>%filter(Sex=='female')%>%summarize(femmean=mean(Age,na.rm=TRUE))
+```
+#14. Median Fare class 1 passengers
+```{r}
+titanic%>%filter(Pclass==1)%>%summarize(onefare=median(Fare,na.rm=TRUE))
+```
+#15. Median Fare non-class 1 Female passengers
+```{r}
+titanic%>%filter(Sex=='female'& Pclass!=1)%>%summarize(femfare=median(Fare, na.rm=TRUE))
+```
+#16. Median age of survived passengers who are female and Class 1 or Class 2
+```{r}
+titanic%>%filter(Survived==1 & Sex=='female' & Pclass!=3)%>%summarize(femage=median(Age,na.rm=TRUE))
+```
+#17. Mean fare of female teenagers survived passengers
+```{r}
+titanic%>%filter(Sex=='female' & Survived==1 & (Age>=13 & Age<20))%>%summarize(faremean=mean(Fare,na.rm=TRUE))
+```
+#18. Mean fare of female teenagers survived passengers for each class
+```{r}
+titanic%>%filter(Sex=='female' & Survived==1 & (Age>=13 & Age<20))%>%group_by(Pclass)%>%summarize(faremean=mean(Fare,na.rm=TRUE))
+```
+#19.  Ratio of Survived and not Survived for passengers who are who pays more than the average fare
+```{r}
+titanic%>%filter(Fare>mean(Fare,na.rm=TRUE))%>%summarize(ratio=sum(Survived)/(n()-sum(Survived)))
+#number of survived over number of not survived
+#1.48 survived to 1 not survived
+```
+#20. Add column that standardizes the fare (subtract the mean and divide by standard deviation) and name it sfare
+```{r}
+newtitanic<-titanic%>%mutate(sfare=(Fare-mean(Fare,na.rm=TRUE))/sd(Fare,na.rm=TRUE))
+```
+#21. Add categorical variable named cfare that takes value cheap for passengers paying less the average fare and takes value expensive for passengers paying more than the average fare.
+```{r}
+newtitanic1<-newtitanic%>%mutate(cfare=cut(Fare,breaks=c(-Inf,mean(Fare,na.rm=TRUE),Inf),labels=c("Cheap","Expensive")))
+```
+#22. Add categorical variable named cage that takes value 0 for age 0-10, 1 for age 10-20, 2 for age 20-30, and so on
+```{r}
+ages<-c(0,9.99,19.99,29.99,39.99,49.99,59.99,69.99,79.99,89.99)
+#allows lower limit of each group to be multiple of 10 - group "1" starts with 10, etc.
+labels<-c(0,1,2,3,4,5,6,7,8)
+newtitanic2<-newtitanic1%>%mutate(cage=cut(Age,breaks=ages,labels=labels))
+```
+#23. Show the frequency of Ports of Embarkation. It appears that there are two missing values in the Embarked variable. Assign the most frequent port to the missing ports.
+```{r}
+frequency<-newtitanic2%>%mutate(Embarked=replace(Embarked,Embarked=='',"S"))%>%group_by(Embarked)%>%summarize(freq=n())
+frequency
+```
+2. Using Dplyr and in Assignment 2, redo  4 using `sample_n` function, redo 5 using `glimpse`, redo 11, 12 and 13. For 11, 12 and 13, you may want to use the combo `group_by` and `summarise`
+#Read in c2015 dataset
+```{r}
+library(readxl)
+c2015<-read_excel('C:/Users/student/Documents/MATH421/data/c2015.xlsx') 
+```
+#Number 4. Check dimension of data. Make new dataset with 1000 random observations. Use seed of 2019 so everyone in the class had the same dataset
+```{r}
+dim(c2015)
+set.seed(2019)
+sample2015<-sample_n(c2015,1000)
+```
+#Number 5. Look at the data. One variable is a constant. Remove that variable from the data.
+```{r}
+glimpse(sample2015)
+sample2015<-sample2015%>%select(-YEAR)
+glimpse(sample2015)
+```
+#Transform the Speed variable for the next set of questions
+```{r}
+library(stringr)
+names<-rownames(sample2015)
+sample2015<-sample2015%>%filter(TRAV_SP!="Unknown",TRAV_SP!='Not Rep')%>%mutate(TRAV_SP=sapply(strsplit(TRAV_SP,split=" ",fixed = TRUE),function(x) (x[1])), TRAV_SP=as.numeric(TRAV_SP))
+sample2015
+```
+#Number 11. Compare the average speed of those who had "No Apprent Injury" and the rest. What do you observe?
+```{r}
+noinjury<-sample2015%>%filter(INJ_SEV=='No Apparent Injury (O)')%>%summarize(mean=mean(TRAV_SP,na.rm=TRUE))
+injury<-sample2015%>%filter(INJ_SEV!='No Apparent Injury (O)')%>%summarize(mean=mean(TRAV_SP,na.rm=TRUE))
+noinjury
+#no injury went an average speed of 44.63 mph
+injury
+#injury went an average speed of 53.09 mph. 
+#We observe that accidents with injuries have higher average car speeds than accidents without injuries.
+```
+#Number 12. Use the SEAT_POS variable to filter the data so that there is only drivers in the dataset. Compare the average speed of man drivers and woman drivers. Comment on the results.
+```{r}
+maledriver<-sample2015%>%filter(SEAT_POS=="Front Seat, Left Side",SEX=="Male")%>%summarize(mean=mean(TRAV_SP,na.rm=TRUE))
+femaledriver<-sample2015%>%filter(SEAT_POS=="Front Seat, Left Side",SEX=="Female")%>%summarize(mean=mean(TRAV_SP,na.rm=TRUE))
+maledriver
+#The average speed of male drivers is 51.65 mph. 
+femaledriver
+#The average speed of female drivers is 46.07 mph.
+#We observe that male drivers in accidents drive faster on average than female drivers in accidents.
+```
+#Number 13. Compare the average speed of drivers who drink and those who do not. Comment on the results.
+```{r}
+nodrink<-sample2015%>%filter(SEAT_POS=="Front Seat, Left Side",DRINKING=="No (Alcohol Not Involved)")%>%summarize(mean=mean(TRAV_SP,na.rm=TRUE))
+drink<-sample2015%>%filter(SEAT_POS=="Front Seat, Left Side",DRINKING=="Yes (Alcohol Involved)")%>%summarize(mean=mean(TRAV_SP,na.rm=TRUE))
+nodrink
+#The average speed for non-drinkers is 44.94 mph.
+drink
+#The average speed for drinkers is 68.25 mph.
+#We observe that people in accidents who had drank alcohol drive faster on average than people in accidents who did not drink alcohol.
+```
+3. Calculate the travel speed (`TRAV_SP` variable) by day.  Compare the travel speed of the first 5 days and the last 5 days of months. 
+```{r}
+days<-sample2015%>%group_by(DAY)%>%summarize(mean=mean(TRAV_SP,na.rm=TRUE))
+mean(days[1:5,]$mean)
+#The mean driving speed for the first five days of the month is 52.41 mph.
+mean(days[27:31,]$mean)
+#The mean driving speed for the last five days of the month is 53.74 mph.
+#We observe people in accidents tend to drive faster on the last five days of the month on average compared to the first five days of the month.
+```
+4. Calculate the travel speed (`TRAV_SP` variable) by day of the week.  Compare the travel speed of the weekdays and weekends. 
+```{r}
+weekday=c('Monday','Tuesday','Wednesday','Thursday','Friday')
+weekend=c('Saturday','Sunday')
+week<-sample2015%>%group_by(DAY_WEEK)%>%summarize(mean=mean(TRAV_SP,na.rm=TRUE))
+week #shows where Saturday and Sunday are in the dataframe
+mean(week[3:4,]$mean)
+#The mean driving speed for my definition of weekend is 54.53 mph.
+mean(week[c(1:2,5:7),]$mean)
+#The mean driving speed for my definition of weekday is 48.40 mph.
+#We observe that people in accidents on weekend days drive faster on average than people in accidents on weekday days.
+```
+5. Find the top 5 states with greatest travel speed.
+```{r}
+states<-sample2015%>%group_by(STATE)%>%summarize(mean=mean(TRAV_SP,na.rm=TRUE))%>%arrange(desc(mean))
+states[1:5,]
+#The top 5 states with greatest travel speeds are South Dakota, North Dakota, Nevada, Wyoming, and Kentucky.
+```
+6. Rank the travel speed by `MONTH`.
+```{r}
+month<-sample2015%>%group_by(MONTH)%>%summarize(mean=mean(TRAV_SP,na.rm=TRUE))%>%arrange(desc(mean))
+month
+```
+7. Find the average speed of teenagers in December. 
+```{r}
+decteen<-sample2015%>%filter(AGE>=13,AGE<20,MONTH=='December')%>%summarize(mean=mean(TRAV_SP,na.rm=TRUE))
+decteen
+```
+8. Find the month that female drivers drive fastest on average.
+```{r}
+femmonth<-sample2015%>%filter(SEX=='Female',SEAT_POS=="Front Seat, Left Side")%>%group_by(MONTH)%>%summarize(mean=mean(TRAV_SP,na.rm=TRUE))%>%arrange(desc(mean))
+femmonth
+#September is the month female drivers drive fastest on average
+```
+9. Find the month that male driver drive slowest on average.
+```{r}
+malemonth<-sample2015%>%filter(SEX=='Male',SEAT_POS=="Front Seat, Left Side")%>%group_by(MONTH)%>%summarize(mean=mean(TRAV_SP,na.rm=TRUE))%>%arrange(mean)
+malemonth
+#February is the month male drivers drive slowest on average. 
+```
+10. Create a new column containing information about the season of the accidents. Compare the percentage of Fatal Injury by seasons. 
+```{r}
+sample2015<-sample2015%>%mutate(seasons=recode(MONTH,'December'='Winter','January'='Winter','February'='Winter','March'='Spring','April'='Spring','May'='Spring','June'='Summer','July'='Summer','August'='Summer','September'='Autumn','October'='Autumn','November'='Autumn'))
+fatal<-sample2015%>%group_by(seasons)%>%summarize(percentage=sum(INJ_SEV=='Fatal Injury (K)')/n())
+fatal
+#The season with the most percentage of fatal accidents is Autumn, and winter is the season with the least percentage of fatal accidents.
+```
+11. Compare the percentage of fatal injuries for different type of deformations (`DEFORMED` variable)
+```{r}
+deformfatal<-sample2015%>%group_by(DEFORMED)%>%summarize(percentage=sum(INJ_SEV=='Fatal Injury (K)')/n())
+deformfatal
+#Accidents with Disabling Damage have the highest percentage of fatal injuries. As the amount of damage descrases, the percentage of fatal accidents decreases.
+```
