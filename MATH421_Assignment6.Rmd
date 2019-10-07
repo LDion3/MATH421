@@ -1,0 +1,38 @@
+---
+title: "Assignment 6: Data Visualization with ggplot2"
+author: "Louis Dion"
+date: "10/7/2019"
+output: html_document
+---
+
+#1.Continue with Question 15 of Assignment 5. We want to add a moving/transition variable to the grapth using the gganimate package. Do the follows to achieve that
+##Install and load the gganimate package
+##Group the data by SEX, INJ_SEV and MONTH then calculate the mean travel speed
+##Reuse the code and 15 and adding transition_states(MONTH) to add the MONTH variable
+##Adding a title using labs(title = 'MONTH = {closest_state}')
+
+#2. Plot bar charts of DRINKING filled by SEX with moving (transition) variable MONTH. Can you add the frequency to each bar?
+
+#3. In this question, we work with the household debt and credit data. Do the follows to import the data to R
+
+##Download the data at this link. (Notice that if you use read_excel to read this file, you may not have the desired outcome.)
+##Install the datapasta package so that we can copy and paste the data to R
+##Open the downloaded file, tab Page 3 Data. Name the first column of the data table as Quarter
+##Select and copy the data table including the variables
+##In Rstudio: Tools -> Addins -> Browse Addins -> Select Paste as tribble -> Excute
+##Don’t forget to name the data
+#Plot a line plot between Student.Loan and Credit.Card
+
+#4.We want to add a moving variable in the graph of 3. The function transition_reveal (link) is great for this. You may tempt to add transition_reveal(Quarter) but notice that transition_reveal does not take the current form of Quarter. Hint: You can create a dummy variable running from 1 to the size of the data and make it the transition variable.
+
+#5.The Quarter variable is not in the right format (date). Create the date column where the date is the first day of each quarter. Plot the graph of Student.Loan by date. Hint Use: the seq.date functions with the increment being three months.
+
+#6.Add transition_reveal(date) to the plot in Question 5. to reveal the graph by quarters.
+
+#7.Use geom_point and geom_text to plot the moving point and the value of the moving points. Hint: geom_point()+  geom_text(aes(label=Student.Loan)) should work.
+
+#8.Include the graphs of other debts to the plot in Question 7, revealing them by date/quarter and differentiating them by colors. Hint: you may want to change the data from long to wide using the gather function.
+
+#9.What is the debt that most correlated with the Total debt. Plot the graph of this debt and the total together revealing by years, differentiation by colors. Plot the remaining debt together in another plot, revealing by years, differentiating by colors. Give a comment on the plots. Label and put captions to the plots.
+
+#10.Use transition_reveal and transition_states to explore the data of the U.S Economy. Plot three animated plots.
