@@ -2,8 +2,8 @@
 title: 'Assignment 5: Data Visualization with ggplot2'
 author: "Louis Dion"
 date: "9/30/2019"
-output:# rmarkdown::github_document
-  html_document:
+output: # rmarkdown :: github_document
+  html_document: default
   pdf_document: default
 ---
 #Using c2015 dataset
