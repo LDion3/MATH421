@@ -10,8 +10,55 @@ output: html_document
 ##Group the data by SEX, INJ_SEV and MONTH then calculate the mean travel speed
 ##Reuse the code and 15 and adding transition_states(MONTH) to add the MONTH variable
 ##Adding a title using labs(title = 'MONTH = {closest_state}')
+```{r}
+#Load packages
+library(gganimate)
+library(tidyverse)
+library(readxl)
+#Load and clean data
+c2015<-read_excel('C:/Users/student/Documents/MATH421/data/c2015.xlsx')
+c2015<-c2015%>%mutate(TRAV_SP=sapply(strsplit(TRAV_SP,split=" ",fixed = TRUE),function(x) (x[1])), TRAV_SP=as.numeric(TRAV_SP))
+c2015<-c2015%>%filter_all(~!is.na(.))
+c2015<-c2015%>%filter_all(~!(.=='Unknown'))
+c2015<-c2015%>%filter_all(~!(.=='Other'))
+c2015<-c2015%>%filter_all(~!(.=='Unknown (Police Reported)'))
+c2015<-c2015%>%filter_all(~!(.=='Injured, Severity Unknown'))
+c2015<-c2015%>%filter_all(~!(.=='Not Rep'))
+c2015<-c2015%>%filter_all(~!(.=='Not Reported'))
+c2015<-c2015%>%filter_all(~!(.==str_detect(.,'Not Rep')))
+c2015<-c2015%>%filter_all(~!(.==str_detect(.,'Unknown')))
+c2015<-c2015%>%mutate(AGE=replace(AGE,AGE=='Less than 1','0'),AGE=as.numeric(AGE))
+c2015<-c2015%>%filter(SEAT_POS=='Front Seat, Left Side')
+```
+```{r}
+#group and calculate mean
+one<-c2015%>%group_by(SEX,INJ_SEV,MONTH)%>%summarize(mean=mean(TRAV_SP))
+one$TRAV_SP_z<-round((one$mean-mean(one$mean))/sd(one$mean),2)
+
+
+#plot
+ggplot(one,aes(x=INJ_SEV, y=TRAV_SP_z ,label=TRAV_SP_z))+
+  geom_bar(stat='identity',aes(fill=SEX),width=0.5)+
+  scale_fill_manual(name='Sex',
+                    labels = c("Male", "Female"), 
+                    values = c("Male"="#00ba38", "Female"="#f8766d"))+
+  transition_states(MONTH)+
+  labs(title = 'MONTH = {closest_state}')+
+  coord_flip()
+
+
+```
 
 #2. Plot bar charts of DRINKING filled by SEX with moving (transition) variable MONTH. Can you add the frequency to each bar?
+```{r}
+two<-c2015%>%group_by(DRINKING,SEX,MONTH)%>%summarize(count=n())
+ggplot(two,aes(x=DRINKING,y=count,label=count))+
+  geom_bar(stat='identity',aes(fill=SEX),position='dodge')+
+  transition_states(MONTH)+
+  geom_text(color='black')+
+  labs(title = 'MONTH = {closest_state}')
+  
+```
 
 #3. In this question, we work with the household debt and credit data. Do the follows to import the data to R
 
@@ -21,18 +68,175 @@ output: html_document
 ##Select and copy the data table including the variables
 ##In Rstudio: Tools -> Addins -> Browse Addins -> Select Paste as tribble -> Excute
 ##Don’t forget to name the data
+```{r}
+credit<-tibble::tribble(
+  ~Quarter, ~Mortgage, ~HE.Revolving, ~Auto.Loan, ~Credit.Card, ~Student.Loan, ~Other, ~Total,
+   "03:Q1",      4.94,          0.24,       0.64,         0.69,          0.24,   0.48,   7.23,
+   "03:Q2",      5.08,          0.26,       0.62,         0.69,          0.24,   0.49,   7.38,
+   "03:Q3",      5.18,          0.27,       0.68,         0.69,          0.25,   0.48,   7.56,
+   "03:Q4",      5.66,           0.3,        0.7,          0.7,          0.25,   0.45,   8.07,
+   "04:Q1",      5.84,          0.33,       0.72,          0.7,          0.26,   0.45,   8.29,
+   "04:Q2",      5.97,          0.37,       0.74,          0.7,          0.26,   0.42,   8.46,
+   "04:Q3",      6.21,          0.43,       0.75,         0.71,          0.33,   0.41,   8.83,
+   "04:Q4",      6.36,          0.47,       0.73,         0.72,          0.35,   0.42,   9.04,
+   "05:Q1",      6.51,           0.5,       0.73,         0.71,          0.36,   0.39,   9.21,
+   "05:Q2",       6.7,          0.53,       0.77,         0.72,          0.37,    0.4,   9.49,
+   "05:Q3",      6.91,          0.54,       0.83,         0.73,          0.38,   0.41,   9.79,
+   "05:Q4",       7.1,          0.57,       0.79,         0.74,          0.39,   0.42,     10,
+   "06:Q1",      7.44,          0.58,       0.79,         0.72,          0.43,   0.42,  10.38,
+   "06:Q2",      7.76,          0.59,        0.8,         0.74,          0.44,   0.42,  10.75,
+   "06:Q3",      8.05,           0.6,       0.82,         0.75,          0.45,   0.44,  11.11,
+   "06:Q4",      8.23,           0.6,       0.82,         0.77,          0.48,   0.41,  11.31,
+   "07:Q1",      8.42,          0.61,       0.79,         0.76,          0.51,    0.4,   11.5,
+   "07:Q2",      8.71,          0.62,       0.81,          0.8,          0.51,   0.41,  11.85,
+   "07:Q3",      8.93,          0.63,       0.82,         0.82,          0.53,   0.41,  12.13,
+   "07:Q4",       9.1,          0.65,       0.82,         0.84,          0.55,   0.42,  12.37,
+   "08:Q1",      9.23,          0.66,       0.81,         0.84,          0.58,   0.42,  12.54,
+   "08:Q2",      9.27,          0.68,       0.81,         0.85,          0.59,    0.4,   12.6,
+   "08:Q3",      9.29,          0.69,       0.81,         0.86,          0.61,   0.41,  12.68,
+   "08:Q4",      9.26,          0.71,       0.79,         0.87,          0.64,   0.41,  12.67,
+   "09:Q1",      9.14,          0.71,       0.77,         0.84,          0.66,   0.41,  12.53,
+   "09:Q2",      9.06,          0.71,       0.74,         0.82,          0.68,   0.39,  12.41,
+   "09:Q3",      8.94,          0.71,       0.74,         0.81,          0.69,   0.38,  12.28,
+   "09:Q4",      8.84,          0.71,       0.72,          0.8,          0.72,   0.38,  12.17,
+   "10:Q1",      8.83,           0.7,        0.7,         0.76,          0.76,   0.36,  12.12,
+   "10:Q2",       8.7,          0.68,        0.7,         0.74,          0.76,   0.35,  11.94,
+   "10:Q3",      8.61,          0.67,       0.71,         0.73,          0.78,   0.34,  11.84,
+   "10:Q4",      8.45,          0.67,       0.71,         0.73,          0.81,   0.34,  11.71,
+   "11:Q1",      8.54,          0.64,       0.71,          0.7,          0.84,   0.33,  11.75,
+   "11:Q2",      8.52,          0.62,       0.71,         0.69,          0.85,   0.33,  11.73,
+   "11:Q3",       8.4,          0.64,       0.73,         0.69,          0.87,   0.33,  11.66,
+   "11:Q4",      8.27,          0.63,       0.73,          0.7,          0.87,   0.33,  11.54,
+   "12:Q1",      8.19,          0.61,       0.74,         0.68,           0.9,   0.32,  11.44,
+   "12:Q2",      8.15,          0.59,       0.75,         0.67,          0.91,   0.31,  11.38,
+   "12:Q3",      8.03,          0.57,       0.77,         0.67,          0.96,   0.31,  11.31,
+   "12:Q4",      8.03,          0.56,       0.78,         0.68,          0.97,   0.32,  11.34,
+   "13:Q1",      7.93,          0.55,       0.79,         0.66,          0.99,   0.31,  11.23,
+   "13:Q2",      7.84,          0.54,       0.81,         0.67,          0.99,    0.3,  11.15,
+   "13:Q3",       7.9,          0.54,       0.85,         0.67,          1.03,    0.3,  11.28,
+   "13:Q4",      8.05,          0.53,       0.86,         0.68,          1.08,   0.32,  11.52,
+   "14:Q1",      8.17,          0.53,       0.88,         0.66,          1.11,   0.31,  11.65,
+   "14:Q2",       8.1,          0.52,       0.91,         0.67,          1.12,   0.32,  11.63,
+   "14:Q3",      8.13,          0.51,       0.93,         0.68,          1.13,   0.33,  11.71,
+   "14:Q4",      8.17,          0.51,       0.96,          0.7,          1.16,   0.34,  11.83,
+   "15:Q1",      8.17,          0.51,       0.97,         0.68,          1.19,   0.33,  11.85,
+   "15:Q2",      8.12,           0.5,       1.01,          0.7,          1.19,   0.34,  11.85,
+   "15:Q3",      8.26,          0.49,       1.05,         0.71,           1.2,   0.35,  12.07,
+   "15:Q4",      8.25,          0.49,       1.06,         0.73,          1.23,   0.35,  12.12,
+   "16:Q1",      8.37,          0.49,       1.07,         0.71,          1.26,   0.35,  12.25,
+   "16:Q2",      8.36,          0.48,        1.1,         0.73,          1.26,   0.36,  12.29,
+   "16:Q3",      8.35,          0.47,       1.14,         0.75,          1.28,   0.37,  12.35,
+   "16:Q4",      8.48,          0.47,       1.16,         0.78,          1.31,   0.38,  12.58,
+   "17:Q1",      8.63,          0.46,       1.17,         0.76,          1.34,   0.37,  12.73,
+   "17:Q2",      8.69,          0.45,       1.19,         0.78,          1.34,   0.38,  12.84,
+   "17:Q3",      8.74,          0.45,       1.21,         0.81,          1.36,   0.39,  12.96,
+   "17:Q4",      8.88,          0.44,       1.22,         0.83,          1.38,   0.39,  13.15,
+   "18:Q1",      8.94,          0.44,       1.23,         0.82,          1.41,   0.39,  13.21,
+   "18:Q2",         9,          0.43,       1.24,         0.83,          1.41,   0.39,  13.29,
+   "18:Q3",      9.14,          0.42,       1.27,         0.84,          1.44,    0.4,  13.51,
+   "18:Q4",      9.12,          0.41,       1.27,         0.87,          1.46,   0.41,  13.54,
+   "19:Q1",      9.24,          0.41,       1.28,         0.85,          1.49,    0.4,  13.67,
+   "19:Q2",      9.41,           0.4,        1.3,         0.87,          1.48,   0.41,  13.86
+  )
+```
+
 #Plot a line plot between Student.Loan and Credit.Card
+```{r}
+ggplot(credit,aes(x=Student.Loan,y=Credit.Card))+
+   geom_line()
+```
 
 #4.We want to add a moving variable in the graph of 3. The function transition_reveal (link) is great for this. You may tempt to add transition_reveal(Quarter) but notice that transition_reveal does not take the current form of Quarter. Hint: You can create a dummy variable running from 1 to the size of the data and make it the transition variable.
+```{r}
+credit$dummy=1:nrow(credit)
+
+ggplot(credit,aes(x=Student.Loan,y=Credit.Card))+
+   geom_line()+
+   transition_reveal(dummy)
+```
 
 #5.The Quarter variable is not in the right format (date). Create the date column where the date is the first day of each quarter. Plot the graph of Student.Loan by date. Hint Use: the seq.date functions with the increment being three months.
+```{r}
+credit$date<-seq(as.Date("2003/1/1"), by = "quarter", length.out = nrow(credit))
+
+ggplot(credit,aes(x=date,y=Student.Loan))+
+   geom_line()
+```
 
 #6.Add transition_reveal(date) to the plot in Question 5. to reveal the graph by quarters.
+```{r}
+ggplot(credit,aes(x=date,y=Student.Loan))+
+   geom_line()+
+   transition_reveal(date)
+```
 
 #7.Use geom_point and geom_text to plot the moving point and the value of the moving points. Hint: geom_point()+  geom_text(aes(label=Student.Loan)) should work.
+```{r}
+ggplot(credit,aes(x=date,y=Student.Loan))+
+   geom_point()+
+   geom_text(aes(label=Student.Loan))+
+   transition_reveal(date)
+```
 
 #8.Include the graphs of other debts to the plot in Question 7, revealing them by date/quarter and differentiating them by colors. Hint: you may want to change the data from long to wide using the gather function.
+```{r}
+creditmelt<-credit%>%select(-Quarter,-dummy)
+creditmelt<-reshape2::melt(creditmelt,id.var='date')
+
+ggplot(creditmelt,aes(x=date,y=value,col=variable))+
+   geom_point()+
+   geom_text(aes(label=variable),size=3)+
+   transition_reveal(date)
+```
 
 #9.What is the debt that most correlated with the Total debt. Plot the graph of this debt and the total together revealing by years, differentiation by colors. Plot the remaining debt together in another plot, revealing by years, differentiating by colors. Give a comment on the plots. Label and put captions to the plots.
+```{r}
+#mortgage appears to be most correlated with total debt, therefore I will be graphing this with total debt.
+#creation of new dataframes
+totalcor<-creditmelt%>%filter(variable=='Mortgage'|variable=='Total')
+restcor<-creditmelt%>%filter(variable!='Total'& variable!='Mortgage')
+
+#first plot
+ggplot(totalcor,aes(x=date,y=value,col=variable))+
+   geom_point()+
+   geom_text(aes(label=variable),size=3)+
+   transition_reveal(date)+
+   labs(title='Mortgage and Total Debt',
+        caption='This plot shows the amount of Mortgage Debt and Total Debt in the US economy from 2003 to 2019.')
+```
+```{r}
+#second plot
+ggplot(restcor,aes(x=date,y=value,col=variable))+
+   geom_point()+
+   geom_text(aes(label=variable),size=3)+
+   transition_reveal(date)+
+   labs(title='Other Debts',
+        caption='This plot shows the amount of for all types of debt besides Mortgage Debt in the US economy from 2003 to 2019.')
+```
 
 #10.Use transition_reveal and transition_states to explore the data of the U.S Economy. Plot three animated plots.
+```{r}
+#plot 1
+ggplot(creditmelt,aes(x=variable,fill=variable))  +
+   geom_bar(stat='identity',aes(y=value))+
+   transition_states(date)+
+   labs(title="Beginning Date of Quarter is {closest_state}")
+#This bar graph shows the value for each type of debt in each quarter. Mortgage and Total are the only one that have shown significant growth over time.
+   
+```
+```{r}
+#plot 2
+ggplot(credit,aes(x=Student.Loan,y=Mortgage))+
+   geom_line()+
+   transition_reveal(date)
+#This line graph shows the Student Loan Debt and Mortgage Debt over time. it appears that although student loan debt increased over the entire time, there was a time where mortgage debt did decrease over the time frame. 
+   
+```
+```{r}
+#plot 3
+ggplot(credit,aes(x=Auto.Loan,y=Credit.Card))+
+   geom_point(col='blue',size=3)+
+   transition_reveal(date)
+#This graph shows the progrssion of Credit Card debt and Auto Loan debt over time. For the beginning of this time period, Auto Loan debt was pretty stagnant while Credit Card debt was very variable. However, as time went on, both types of debt did increase.   
+```
+
