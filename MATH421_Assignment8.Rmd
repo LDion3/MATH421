@@ -72,11 +72,9 @@ cat
 5. Use map to graph the histograms of numeric variables and bar charts of categorical variables in the Titanic data
 ```{r}
 map(titanic%>%select_if(is.numeric),  ~hist(.))
-#X NAMES
 ```
 ```{r}
 map(titanic%>%select_if(is.character),  ~barplot(table(.)))
-#X NAMES
 ```
 
 6. Redo Question 11 in Assignment 7 using map. Hint: You may want to use a nested map. For instance this following codes print out all the possibility of x+y where both x and y are running from 1 to 2.
