@@ -1,0 +1,142 @@
+---
+title: "Math421_Assignment8"
+author: "Louis Dion"
+date: "10/28/2019"
+output: html_document
+---
+#### input anything we need for the assignment
+```{r}
+library(purrr)
+library(tidyverse)
+library(readxl)
+titanic = read_csv('C:/Users/student/Documents/MATH421/data/titanic.csv')
+titanic$Pclass = as.character(titanic$Pclass)
+titanic$Survived = as.character(titanic$Survived)
+```
+
+
+1. Working with the Titanic dataset. Use the map function to compute the number of NA for each columns. Use map_int to turn the output to an interger vector.
+```{r}
+na<-map(titanic, ~sum(is.na(.)))
+navector<-map_int(titanic,~sum(is.na(.)))
+navector
+```
+
+2. Use map function to calculate the mean of numeric variables in the Titanic dataset.
+```{r}
+average<-titanic%>%select_if(is.numeric)%>%map(., ~mean(.,na.rm=TRUE))
+average
+```
+
+3. Use map function to show the means, medians, and standard deviations of numeric variables in the Titanic dataset. Use map_df to show the result in a data frame format.
+```{r}
+df<-titanic%>%select_if(is.numeric)%>%map(., ~list(
+  mean =  mean(.x,na.rm=TRUE),
+  median = median(.x,na.rm=TRUE),
+  sd = sd(.x,na.rm=TRUE)))
+df1<-titanic%>%select_if(is.numeric)%>%map_df(.,~list(
+  mean =  mean(.x,na.rm=TRUE),
+  median = median(.x,na.rm=TRUE),
+  sd = sd(.x,na.rm=TRUE))) 
+df1$names<-colnames(titanic%>%select_if(is.numeric))
+
+df1
+```
+
+4. Use map function to show the mode (most frequent category) and the number of categories for each categorical variables. Put the result in data frame.
+```{r}
+#function to calculate mode in a vector
+Mode = function(x){
+    ta = table(x)
+    tam = max(ta)
+    if (all(ta == tam))
+         mod = NA
+    else
+         if(is.numeric(x))
+    mod = as.numeric(names(ta)[ta == tam])
+    else
+         mod = names(ta)[ta == tam]
+    return(mod)
+}
+
+#using map
+cat<-titanic%>%select_if(is.character)%>%map_df(.,~list(
+  mode = Mode(.x)[1],
+  categories = length(unique(.x))))
+cat$names<-colnames(titanic%>%select_if(is.character))
+
+cat
+
+```
+
+5. Use map to graph the histograms of numeric variables and bar charts of categorical variables in the Titanic data
+```{r}
+map(titanic%>%select_if(is.numeric),  ~hist(.))
+#X NAMES
+```
+```{r}
+map(titanic%>%select_if(is.character),  ~barplot(table(.)))
+#X NAMES
+```
+
+6. Redo Question 11 in Assignment 7 using map. Hint: You may want to use a nested map. For instance this following codes print out all the possibility of x+y where both x and y are running from 1 to 2.
+
+map(1:2, function(x){map(1:2, function(y){x+y})})
+```{r}
+redo<- function(d,k) {
+  if (k==1) {
+    df1 = d[, sapply(d, function(col) length(unique(col))) <= 4]
+    map(1:ncol(df1), function(i) {map(1:ncol(df1),function(j) {print(names(df1)[c(i,j)])
+      print(ggplot(df1,aes(x = df1[[i]], fill = df1[[j]])) + geom_bar(position = 'dodge')+labs(x = names(df1)[[i]], fill = names(df1)[[j]]))})})
+  }
+  if (k==2) {
+    df1 = d[, sapply(d, function(col) is.numeric(col))]  
+    map(1:ncol(df1), function(i) { print (names(df1)[i])
+      print (ggplot(df1, aes(x = df1[[i]]))+geom_density()+labs(x = names(df1)[[i]]))})
+  }
+  if (k==3) {
+    df1 = d[, sapply(d, function(col) is.numeric(col))]
+    df2 = d[, sapply(d, function(col) length(unique(col))) <= 4]
+    map(1:ncol(df1), function(i) {map(1:ncol(df2), function(j) {print(ggplot(data=df1,aes(x = df1[[i]]))+geom_density(data = df2, aes(col = df2[[j]]))+labs(x = names(df1)[[i]], col = names(df2)[[j]]))})})
+  }
+}
+redo(titanic,3)
+```
+
+
+7. The function lm computes a linear model. For instance, to do run linear model on the output (y variable) Fare of the input Age (x variable) in the titanic data frame, d, we use
+# To run a linear model of Fare on Age
+lm(Fare~Age, d)
+
+# To get the r-square of the linear model
+summary(lm(Fare~Age, d))$r.square
+Write a function, using map, to
+
+input: a data frame
+output: a data frame of consist three columns x1, x2 and r where the pairs (x1,x2) are all possible pairs of continuous variables of the input data frame and r is the corresponding r square of x1 and x2. Test the function on the titanic data assuming that the PassengerID is also a coninuous variable.
+
+```{r}
+
+seven<- function(d){
+d1 = d%>%select_if(is.numeric)
+d2 = data.frame() 
+  for (i in 1:ncol(d1)) {
+    for (j in 1:ncol(d1)) {
+      d3 = map_df(d1,~list(
+        x1=names(d1)[i],
+        x2=names(d1)[j],
+        r = round(summary(lm(d1[[j]]~d1[[i]],d1))$r.square,digits = 5)
+      ))
+      d3 = d3[1,]
+      d2=rbind(d2,d3)
+  }
+} 
+  return (d2)
+}
+
+seven(titanic)
+
+
+
+```
+
