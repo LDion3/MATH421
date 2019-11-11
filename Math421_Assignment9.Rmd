@@ -1,0 +1,311 @@
+---
+output: # rmarkdown::github_document
+  html_document:
+  word_document: default
+  pdf_document: default
+title: "Assignment 9.  Predictive Modeling in R"
+author: "Louis Dion"
+date: "11/4/19"
+---
+
+```{r global_options, include=FALSE}
+knitr::opts_chunk$set(fig.width=12, fig.height=8, fig.path='Figs/',
+                      warning=FALSE, message=FALSE)
+```
+
+__***Submission Instruction***__.  You will need to submit on **Blackboard**, in the **Assignment** section, a link to your assignment on your Github Webpage.  Following [this](https://guides.github.com/features/pages/) to create a github webpage and posted a link to your assignment. 
+### Input what we need for the assignment.
+```{r}
+library(tidyverse)
+library(readxl)
+library(caret)
+library(rpart)
+library(rattle)
+library(ranger)
+
+titanic = read_csv('C:/Users/student/Documents/MATH421/data/titanic.csv')
+
+#clean data (drop unimportant variables)
+titanic$Name = NULL
+titanic$PassengerId = NULL
+titanic$Ticket = NULL
+titanic$Cabin = NULL
+
+#impute missing data using functions from previous assignments
+six = function (v) {
+  if (anyNA(v)) {
+    for (i in 1:length(v)) {
+      if (is.na(v[i])) {
+      v[i] = mean(v,na.rm=TRUE)
+      }
+      else {
+      v[i] = v[i]
+      }
+    }
+    return (v)  
+  }
+  else {
+    print ("There is no missing value.")
+    return (v)
+  }
+}
+Mode = function(x){
+    ta = table(x)
+    tam = max(ta)
+    if (all(ta == tam))
+         mod = NA
+    else
+         if(is.numeric(x))
+    mod = as.numeric(names(ta)[ta == tam])
+    else
+         mod = names(ta)[ta == tam]
+    return(mod)
+}
+seven = function(v) {
+  if (anyNA(v)) {
+    for (i in 1:length(v)) {
+      if (is.na(v[i])) {
+      v[i]= Mode(v)
+      }
+      else {
+      v[i] = v[i]
+      }
+    }
+    return (v)  
+  }
+  else {
+    print ("There is no missing value.")
+    return (v)
+  }
+}
+eight = function(d) {
+  for (i in 1:ncol(d)) {
+    if (is.numeric(d[[i]])) {
+      d[[i]] = six(d[[i]])
+    }
+    if (is.character(d[[i]])) {
+      d[[i]] = seven(d[[i]])
+    }
+  }
+  return (d)
+}
+
+titanic = eight(titanic)
+
+#make certain variables categorical
+titanic$Pclass = as.character(titanic$Pclass)
+titanic$Survived = as.factor(titanic$Survived)
+
+head(titanic)
+```
+
+
+
+### Decision Tree on the Titanic data
+1. This following codes build a predictive model to predict if a passenger in the titanic is survived or not. A common practice is to split the data into 2 subdata: a train data and a test data.  The model is build from the train data and then tested on the test data.  
+
+```{r, eval = FALSE}
+
+# Split the data into 70% training and 30% testing
+splitIndex <- createDataPartition(titanic$Survived, p = .70, list = FALSE)
+train <- titanic[ splitIndex,]
+test <- titanic[-splitIndex,]
+
+library(rpart) #load the rpart package
+
+# build a tree
+mytree <- rpart(Survived ~ ., data = train, method = "class")
+
+# Plot the tree
+library(rattle)
+fancyRpartPlot(mytree)
+
+# Evaluate the tree on the testing data
+
+#predict on testing data
+pred <- predict(mytree,test, type = "class")
+
+#Evaluate the predictions
+cm=confusionMatrix(data = pred, reference = test$Survived, positive = "1")
+
+# Build another tree
+# Tree with depth=2
+mytree2 <- rpart(Survived ~ ., data = train, method = "class", control = rpart.control(maxdepth = 3))
+fancyRpartPlot(mytree2)
+
+```
+Following the codes and 
+
+- Compute the training error of a decision tree with `maxdepth=1`
+```{r}
+#split data
+set.seed(2019)
+splitIndex <- createDataPartition(titanic$Survived, p = .70, list = FALSE)
+train <- titanic[ splitIndex,]
+test <- titanic[-splitIndex,]
+
+# build tree
+tree1 <- rpart(Survived ~ ., data = train, method = "class", control = rpart.control(maxdepth = 1))
+
+#predict on trainnf data
+pred <- predict(tree1,train, type = "class")
+
+#Evaluate the predictions
+cm=confusionMatrix(data = pred, reference = train$Survived, positive = "1")
+
+error= 1 - cm$overall['Accuracy']
+
+error
+
+#for the seed 2019, the training error is .224
+
+```
+
+- Compute the training errors of decision trees with `maxdepth` running from 1 to 10.  How does the training error change when the `maxdepth` increases. 
+```{r}
+numbers<-c(1:10)
+for (i in numbers){
+  tree <- rpart(Survived ~ ., data = train, method = "class", control = rpart.control(maxdepth = i)) 
+  pred <- predict(tree,train, type = "class")
+  cm=confusionMatrix(data = pred, reference = train$Survived, positive = "1")
+  error= 1 - cm$overall['Accuracy']
+  print(i)
+  print(error)
+}
+
+#The training error decreases when maxdepth increases.
+
+```
+
+- Compute the test errors of decision trees with `maxdepth` running from 1 to 10.  How does the test error change when the `maxdepth` increases. 
+```{r}
+for (i in numbers){
+  tree <- rpart(Survived ~ ., data = train, method = "class", control = rpart.control(maxdepth = i)) 
+  pred <- predict(tree,test, type = "class")
+  cm=confusionMatrix(data = pred, reference = test$Survived, positive = "1")
+  error= 1 - cm$overall['Accuracy']
+  print(i)
+  print(error)
+}
+
+#test error both increased and decreased when maxdepth increased by 1, but overall, the test error did decrease.
+```
+
+- Parameter tuning is the process to find out the best selection for the parameter.  What would be the best selection of the parameter `maxdepth`?
+```{r}
+#The best selection of the parameter "maxdepth" is when "maxdepth" is 3 as this tree is the simplest model with the lowest test error value. 
+```
+
+
+### Random Forest on the Titanic data
+
+2. A random forest is a combination of many trees. The decision of random forest is a majority vote between all the trees. For example, if a forest has 5 trees and three (majority) trees predict a passenger survived, the forest also predict that passenger survived. If only two trees predict survived, the forest would predict the passenger `not survived`.  
+
+Also, to decide where to split at each node, a tree in a forest only consider at a random number of variables to decide instead of considering all the variables. 
+
+The number of trees and the number of variables considered at each split are two of the most common parameters of random forest.  This following codes implement random forest using the `ranger` package. 
+
+```{r, eval=FALSE}
+# Building random forest using ranger
+
+# import the ranger library
+library(ranger)
+
+#train a forest of 10 trees and consider a random of 3 variables at each split
+model = ranger(Survived ~., data = train, mtry = 1, num.trees = 10)
+
+# predict and test on the test dataset
+pred3  = predict(model, data = test)$predictions
+
+# Get the confusion matrix
+confusionMatrix(pred3, test$Survived, positive="1")
+```
+
+- Compute the training errors of random forest with `mtry` running from 1 to its maximum and `num.trees` running from 1 to 20.  
+
+```{r}
+for  (i in 1:7){
+  for (j in 1:20) {
+    model = ranger(Survived ~., data = train, mtry = i, num.trees = j)
+    pred3  = predict(model, data = train)$predictions
+    cm = confusionMatrix(pred3, train$Survived, positive="1") 
+    error= 1 - cm$overall['Accuracy']
+    print(c(i,j))
+    print(error)
+  }
+}
+
+```
+
+
+- Compute the testing errors of random forest with `mtry` running from 1 to its maximum and `num.trees` running from 1 to 20.  
+```{r}
+for  (i in 1:7){
+  for (j in 1:20) {
+    model = ranger(Survived ~., data = train, mtry = i, num.trees = j)
+    pred3  = predict(model, data = test)$predictions
+    cm = confusionMatrix(pred3, test$Survived, positive="1") 
+    error= 1 - cm$overall['Accuracy']
+    print(c(i,j))
+    print(error)
+  }
+}
+```
+
+
+- What would be the best selection of the parameters `mtry` and `num.trees`?
+```{r}
+#The lowest testing error rate out of the models is 0.1353383, and this model has mtry=3 and num.trees=12
+```
+
+
+3. Implement decision tree and random forest on the `adult` data at [this link](https://www.kaggle.com/uciml/adult-census-income/download) to predict if a person earn more than 50k or not. For a random forest try 5 different values for each of the parameter `mtry`, `min.node.size` and try different values for the parameter `splitrule` then decide the best ones. 
+
+Note that:
+
+- `splitrule=gini` Gini Index is used to decide the best split at nodes
+- `splitrule=extratrees`:  Split is decided randomly with no rules.  This is an idea of the [Extreme Randomized Tree](https://link.springer.com/article/10.1007/s10994-006-6226-1) 
+```{r}
+#bring in and clean data
+adult = read_csv('C:/Users/Student/Documents/MATH421/adult.csv')
+adult=adult%>%filter(workclass!='?')
+adult$income=as.factor(adult$income)
+
+#Decision Tree
+#split data
+set.seed(2019)
+splitIndex <- createDataPartition(adult$income, p = .70, list = FALSE)
+train <- adult[ splitIndex,]
+test <- adult[-splitIndex,]
+
+# pruning
+for (i in 1:10) {
+ tree1 <- rpart(income ~ ., data = train, method = "class", control = rpart.control(maxdepth = i))
+ pred <- predict(tree1,test, type = "class") 
+ cm=confusionMatrix(data = pred, reference = test$income, positive = ">50K")
+ error= 1 - cm$overall['Accuracy']
+ print(i)
+ print(error)
+}
+
+#The model does not improve after maxdepth=3, in which the testing error is .1602, so that model is considered the best in this scenario.
+```
+```{r}
+#Random Forest
+
+for  (i in 1:5){
+  for (j in 1:5) {
+      model = ranger(income ~., data = train, mtry = i, min.node.size = j,splitrule='gini')
+      pred3  = predict(model, data = test)$predictions
+      cm = confusionMatrix(pred3, test$income, positive=">50K") 
+      error= 1 - cm$overall['Accuracy']
+      print(c(i,j,'gini'))
+      print(error)
+  }
+}
+
+#when trying to use different splitrules, R abondoned the session and crashed; therefore, I am not looking into this section.
+#The lowest testing error was 0.1386, when mtry=3 and min.node.size=3 .
+```
+
+
