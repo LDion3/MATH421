@@ -1,0 +1,206 @@
+---
+output: # rmarkdown::github_document
+  pdf_document: default
+  word_document: default
+  html_document:
+title: "Assignment 10.  Predictive Modeling in R with Caret"
+author: "Louis Dion"
+date: "11/6/19"
+---
+
+```{r global_options, include=FALSE}
+knitr::opts_chunk$set(fig.width=12, fig.height=8, fig.path='Figs/',
+                      warning=FALSE, message=FALSE)
+```
+
+
+__***Submission Instruction***__.  You will need to submit on **Blackboard**, in the **Assignment** section, a link to your assignment on your Github Webpage.  Following [this](https://guides.github.com/features/pages/) to create a github webpage and posted a link to your assignment. 
+
+In assignment 9, we use two different packages (`rpart` and `ranger`) to run two different models (decision tree and random forest). There are many other packages for predictive models in R that may requires different set of codes to run. The `caret` and `mlr` packages provide an uniform frame work for training and tuning models in R. 
+
+Although, `Caret` is the older and more popular package, Max Kuhn, the package's founder has joined Rstudio to work on different projects and ideas for predicive models (`tidymodels`).  Thus, `caret` may not have a frequent support and updates in the future. 
+
+In this assignment, we will go over the caret package. 
+
+### Build and Tune models with Caret
+
+1. The following codes implement decision tree (in `rpart`) and random forest (in `ranger`) in `Caret`.  
+
+library(caret)
+
+##### Train Decision Tree
+model <- train(target~.,data =train, method = "rpart")
+
+##### Predict using the trained tree
+pred2=predict(model,test)
+
+##### Evaluate the result
+cm=confusionMatrix(pred2, test$target, positive="1")
+
+
+##### Train random forest
+model <- train(target~.,data =train, method = "ranger")
+
+##### Predict using the trained random forest
+pred2=predict(model,test)
+
+##### Evaluate the result
+cm=confusionMatrix(pred2, test$target, positive="1")
+
+
+As you observe, the codes for decision tree and random forest are the same except for the `method=...` The list of supported models/packages that `Caret` provides can be found [here](http://topepo.github.io/caret/available-models.html). 
+
+**Do the follows**
+```{r}
+#bring in titanic and clean from previous assignment
+library(caret)
+library(tidyverse)
+library(readxl)
+library(fastDummies)
+titanic = read_csv('C:/Users/student/Documents/MATH421/data/titanic.csv')
+
+titanic$Name = NULL
+titanic$PassengerId = NULL
+titanic$Ticket = NULL
+titanic$Cabin = NULL
+
+six = function (v) {
+  if (anyNA(v)) {
+    for (i in 1:length(v)) {
+      if (is.na(v[i])) {
+      v[i] = mean(v,na.rm=TRUE)
+      }
+      else {
+      v[i] = v[i]
+      }
+    }
+    return (v)  
+  }
+  else {
+    print ("There is no missing value.")
+    return (v)
+  }
+}
+Mode = function(x){
+    ta = table(x)
+    tam = max(ta)
+    if (all(ta == tam))
+         mod = NA
+    else
+         if(is.numeric(x))
+    mod = as.numeric(names(ta)[ta == tam])
+    else
+         mod = names(ta)[ta == tam]
+    return(mod)
+}
+seven = function(v) {
+  if (anyNA(v)) {
+    for (i in 1:length(v)) {
+      if (is.na(v[i])) {
+      v[i]= Mode(v)
+      }
+      else {
+      v[i] = v[i]
+      }
+    }
+    return (v)  
+  }
+  else {
+    print ("There is no missing value.")
+    return (v)
+  }
+}
+eight = function(d) {
+  for (i in 1:ncol(d)) {
+    if (is.numeric(d[[i]])) {
+      d[[i]] = six(d[[i]])
+    }
+    if (is.character(d[[i]])) {
+      d[[i]] = seven(d[[i]])
+    }
+  }
+  return (d)
+}
+
+titanic = eight(titanic)
+
+titanic$Pclass = as.character(titanic$Pclass)
+titanic$Survived = as.factor(titanic$Survived)
+```
+
+
+- Compute the accuracy of Linear Discriminant Analysis model on the titanic prediction. 
+```{r}
+#split data
+set.seed(2019)
+splitIndex <- createDataPartition(titanic$Survived, p = .70, list = FALSE)
+train <- titanic[ splitIndex,]
+test <- titanic[-splitIndex,]
+#train LDA model
+model <- train(Survived~.,data =train, method = "lda")
+pred2=predict(model,test)
+cm=confusionMatrix(pred2, test$Survived, positive="1")
+#compute accuracy
+cm$overall['Accuracy']
+cm$byClass['Balanced Accuracy']
+
+
+```
+
+
+- Write a function has:
+
+    - Input: A vector of methods for predictive models
+    - Output: A data frame that has three columns: Column 1 is the name of the method, Column 2 is the accuracy of the methods and Column 3 is the balanced accuracy of the method. The rows are ordered by Column 3. 
+    
+Notice that some methods requires the columns to be all numeric so you may have to convert the categorical variables into numeric variables.  [`fastDummies`](https://cran.r-project.org/web/packages/fastDummies/vignettes/making-dummy-variables.html) is one quick way to do that. `Caret` also provides support in this regard with `dummyVars`  function.  
+```{r}
+types<-c('lda','rpart','ranger')
+
+model_df<-function(methods) {
+  column=c('Pclass','Embarked','Sex')
+  titanic=dummy_cols(titanic,select_columns = column,remove_first_dummy = TRUE)
+  titanic=titanic%>%select(-column)
+  for (i in methods) {
+    set.seed(2019)
+    splitIndex <- createDataPartition(titanic$Survived, p = .70, list = FALSE)
+    train <- titanic[ splitIndex,]
+    test <- titanic[-splitIndex,]
+    model <- train(Survived~.,data =train, method = i)
+    pred2=predict(model,test)
+    cm=confusionMatrix(pred2, test$Survived, positive="1")
+    #compute accuracy
+    print(cm$overall['Accuracy'])
+    print(cm$byClass['Balanced Accuracy'])
+  }
+}
+
+model_df(types)
+```
+
+
+2. In assignment 9, we actually cheated a bit when tuning the parameters for decision tree and random forest. We did use the test set to reveal the best selections for the parameters. The test set should not be used for tuning purpose. It should only be used as the evaluation of the final model. This below codes show how `caret` tunes the parameters (`mtry`, `splitrule` and `min.node.size`) ofthe `ranger` random forest not using the test set. 
+
+# Set the searching range
+myGrid = expand.grid(mtry = c(1:2), splitrule = c("gini"),
+                     min.node.size = c(1:2))
+
+model <- train(target~.,data = train, method = "ranger", tuneGrid = myGrid)
+print(model)
+
+# Plot the tuning result
+plot(model)
+
+# Used the tuned model for prediction
+pred  = predict(model, test)
+cm=confusionMatrix(pred, test$target, positive="1")
+cm
+
+Not all parameters of `ranger` can be tuned with `caret`.  `Caret` only support to tune three parameters: `mtry`, `splitrule` and `min.node.size`. To see the supported tuning parameters of ranger in caret, one can use this [link](https://topepo.github.io/caret/available-models.html) or use `getModelInfo('ranger')$ranger$parameters`.  
+
+**Do the follows**
+
+- What is the tuning parameter of decision tree `rpart2` in caret?  Tune this parameter and plot the result. Report the accuracy. 
+
+- Train and tune two other models using caret.  Plot the result. Report the accuracy. 
+
