@@ -1,8 +1,8 @@
 ---
 output: # rmarkdown::github_document
-  pdf_document: default
-  word_document: default
   html_document:
+  word_document: default
+  pdf_document: default
 title: "Assignment 10.  Predictive Modeling in R with Caret"
 author: "Louis Dion"
 date: "11/6/19"
@@ -158,6 +158,7 @@ Notice that some methods requires the columns to be all numeric so you may have 
 types<-c('lda','rpart','ranger')
 
 model_df<-function(methods) {
+  d1=data.frame()
   column=c('Pclass','Embarked','Sex')
   titanic=dummy_cols(titanic,select_columns = column,remove_first_dummy = TRUE)
   titanic=titanic%>%select(-column)
@@ -169,10 +170,15 @@ model_df<-function(methods) {
     model <- train(Survived~.,data =train, method = i)
     pred2=predict(model,test)
     cm=confusionMatrix(pred2, test$Survived, positive="1")
-    #compute accuracy
-    print(cm$overall['Accuracy'])
-    print(cm$byClass['Balanced Accuracy'])
+    d2=data.frame(
+      model=i,
+      Accuracy=cm$overall['Accuracy'],
+      Balanced=cm$byClass['Balanced Accuracy']
+    )
+    d1=rbind(d1,d2)
   }
+  rownames(d1)<-c()
+  return(d1)
 }
 
 model_df(types)
@@ -200,7 +206,56 @@ Not all parameters of `ranger` can be tuned with `caret`.  `Caret` only support 
 
 **Do the follows**
 
-- What is the tuning parameter of decision tree `rpart2` in caret?  Tune this parameter and plot the result. Report the accuracy. 
+- What is the tuning parameter of decision tree `rpart2` in caret?  Tune this parameter and plot the result. Report the accuracy.
+```{r}
+set.seed(2019)
+splitIndex <- createDataPartition(titanic$Survived, p = .70, list = FALSE)
+train <- titanic[ splitIndex,]
+test <- titanic[-splitIndex,]
+
+#The tuning parameter for "rpart2" is maxdepth. I will tune this paramter for this section
+myGrid = expand.grid(maxdepth=c(1:20))
+
+model <- train(Survived~.,data = train, method = "rpart2", tuneGrid = myGrid)
+
+print(model)
+plot(model)
+
+pred  = predict(model, test)
+cm=confusionMatrix(pred, test$Survived, positive="1")
+cm
+
+```
+
 
 - Train and tune two other models using caret.  Plot the result. Report the accuracy. 
+```{r}
+#Model 1: "LogitBoost" Boosted Logistic Regression, grid:nIter
+myGrid = expand.grid(nIter=c(1:30))
+
+model <- train(Survived~.,data = train, method = "LogitBoost", tuneGrid = myGrid)
+
+print(model)
+plot(model)
+
+pred  = predict(model, test)
+cm=confusionMatrix(pred, test$Survived, positive="1")
+cm
+```
+
+```{r}
+#Model 2: "knn"- k-nearest neighbors, grid: k-number of clusters
+myGrid = expand.grid(k=c(1:15))
+
+model <- train(Survived~.,data = train, method = "knn", tuneGrid = myGrid)
+
+print(model)
+plot(model)
+
+pred  = predict(model, test)
+cm=confusionMatrix(pred, test$Survived, positive="1")
+cm
+```
+
+
 
