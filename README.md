@@ -6,3 +6,5 @@
 [Assignment 7](Math421_Assignment7.html)
 
 [Assignment 8](MATH421_Assignment8.html)
+
+[Assignment 9](Math421_Assignment9.html)
