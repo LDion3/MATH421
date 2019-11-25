@@ -44,6 +44,7 @@ for (i in 1:nrow(hospital1)) {
 - Restricted to year 2015-2018
 - Removed all observations with unknown sex
 - Created "Expired" variable for whether a person died or not
+- Create "numdx" and "numpx" showing number of diagnoses and number of prescriptions data has
 ```{r}
 head(hospital1)
 ```
@@ -133,7 +134,7 @@ ggplot(hospital1%>%filter(raceethn!=9&raceethn!=''),aes(x=sex,y=raceethn,fill=ag
 
 ## Predictive Modeling
 - Prediction Variable: Expired
-- Variable used for predicting: age, sex, race,admtype,trandb,tot
+- Variable used for predicting: age, sex, race,admtype,trandb,tot, numdx, numpx
 ```{r}
 modeldf<-hospital1%>%select(c(4,5,6,13,42,58,136:138))%>%filter(admtype!=9)
 #make the target variable a factor variable
@@ -152,9 +153,11 @@ n1 = nrow(train1)
 train00 = train0[sample(1:n0, n1),]
 train_under = rbind(train00, train1)
 #use train_under and test for models
+head(modeldf)
 ```
 ## Predictive Modeling
 - Model 1: K-Nearest Neighbors
+- Tuning parameters: k: Number of neighbors
 ```{r}
 myGrid = expand.grid(k=c(1:15))
 
@@ -167,6 +170,7 @@ print(cm$byClass['Balanced Accuracy'])
 
 ## Predictive Modeling
 - Model 2: Boosted Logistic Regression
+- Tuning parameters: nIter: number of iterations
 ```{r}
 myGrid = expand.grid(nIter=c(1:30))
 
@@ -179,6 +183,7 @@ print(cm$byClass['Balanced Accuracy'])
 
 ## Predictive Modeling
 - Model 3: rpart2
+- Tuning parameters: maxdepth
 ```{r}
 myGrid = expand.grid(maxdepth=c(1:30))
 
@@ -192,6 +197,7 @@ print(cm$byClass['Balanced Accuracy'])
 
 ## Predictive Modeling
 - Model 4: Ranger
+- Tuning parameters: mtry, splitrule, min node size
 ```{r}
 myGrid = expand.grid(mtry = c(1:10), splitrule = c("gini"), min.node.size = c(1:10))
 
@@ -204,6 +210,7 @@ print(cm$byClass['Balanced Accuracy'])
 
 ## Predictive Modeling
 - Model 5: Stepwise Linear Discriminant Analysis 
+- Tuning parameters: maxvar, direction
 ```{r}
 myGrid = expand.grid(maxvar=c(1:5),direction=c("both", "forward", "backward"))
 
