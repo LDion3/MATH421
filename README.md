@@ -10,3 +10,7 @@
 [Assignment 9](Math421_Assignment9.html)
 
 [Assignment 10](Math421_Assignment10.html)
+
+[Midterm](Midterm.html)
+
+[Midterm Presentation](Midterm-presentation-ldion.html)
