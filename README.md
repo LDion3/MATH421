@@ -11,6 +11,6 @@
 
 [Assignment 10](Math421_Assignment10.html)
 
-[Midterm]()
+[Midterm](Midterm.html)
 
 [Midterm Presentation]()
