@@ -8,3 +8,5 @@
 [Assignment 8](MATH421_Assignment8.html)
 
 [Assignment 9](Math421_Assignment9.html)
+
+[Assignment 10](Math421_Assignment10.html)
