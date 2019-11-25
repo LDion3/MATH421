@@ -14,3 +14,5 @@
 [Midterm](Midterm.html)
 
 [Midterm Presentation](Midterm-presentation-ldion.html)
+
+[Revised Presentation](Midterm-presentation.html)
