@@ -1,0 +1,188 @@
+---
+title: "Midterm Project MATH421"
+author: "Louis Dion"
+date: "11/13/2019"
+output: html_document
+---
+#Import packages for the assignment
+```{r}
+library(tidyverse)
+library(haven)
+library(caret)
+```
+
+#Inputting Hospital Data
+```{r}
+#bring in dataset from computer
+hospital <- read_sas("C:/Users/student/Documents/MATH421/data/hdd0318cy.sas7bdat", NULL)
+#only patients from 2015 to 2018
+hospital1<-hospital%>%filter(yoa==c(15,16,17,18))
+#make numeric variables for those that are supposed to be numeric 
+for (i in c(37:38,41:54,57,67,69:70,72,74)){
+  hospital1[[i]]=as.numeric(hospital1[[i]])
+}
+#make character variable for admission variables
+hospital1$moa<-as.character(hospital1$moa)
+hospital1$yoa<-as.character(hospital1$yoa)
+#remove people with missing sex
+hospital1<-hospital1%>%filter(sex==c(1,2))
+#create "Expired" variable where 1 is person has expired or died and 0 is not.
+hospital1$Expired[hospital1$dispub92==c(20,40,41,42)]<-'1'
+hospital1$Expired[hospital1$dispub92!=c(20,40,41,42)]<-'0'
+#create number of diagnoses varibles
+for (i in 1:nrow(hospital1)) {
+  hospital1$numdx[i]<-sum(hospital1[i,c(16:22,59:62,76:89)]!='')
+}
+#create number of prescriptions variable
+for (i in 1:nrow(hospital1)) {
+  hospital1$numpx[i]<-sum(hospital1[i,c(23:32,90:104)]!='')
+}
+head(hospital1)
+```
+
+#Data Viusualization
+##Provide 10 visualizations from the data that tell an interesting story
++one graph that visualizes two variables
++one graph that visualizes 3 variables
++one graph that visualizes 4 variables
++encouraged to use animation
+```{r}
+#Graph 1
+ggplot(hospital1,aes(x=provider,fill=provider))+
+  geom_bar()
+#This bar graph shows there are four main providers of treatment: 7204-Miriam, 7205-Rhode Island Hospital, 7210-Kent County, and 7214-Woman and Infants.
+```
+```{r}
+#Graph 2
+ggplot(hospital1,aes(x=tot))+
+  geom_density()+
+  xlim(0,150000)
+#This density plot shows that most patients pay between between $0 and $35000 for their treatment in Rhode Island Hospitals.
+
+```
+```{r}
+#Graph 3
+ggplot(hospital1,aes(x=payer,fill=payer))+
+  geom_bar()
+#THis bar graph shows that there are three main forms of payment in Rhode Island Hospitals: 0-Medicare,5-Blue Cross, and G-RIte Care
+```
+```{r}
+#Graph 4
+ggplot(hospital1,aes(x=admtype,fill=admtype))+
+  geom_bar()
+#This bar plot shows that Emergency admissions are by far how most people are admitted to Rhode Island hospitals, followed by Urgent Care admissions, Electric admissions, and Newborn Admissions.
+```
+```{r}
+#Graph 5
+ggplot(hospital1,aes(x=age))+
+  geom_histogram(bins=20,fill='blue')
+#There are three main age groups of people that get admitted into the hospital: newborns/infants, people around the age of 30, and people over the age of aorund 55.
+```
+```{r}
+#Graph 6
+ggplot(hospital1%>%filter(er_mode==c(1,2,3,4,5)),aes(x=er_mode,fill=er_mode))+
+  geom_bar()
+#This bar graph shows that for patients with known modes of arrival, most patients arrive by method 1, Rescue Service/Ambulance, or method 4-Personal/Public Transportation  
+```
+```{r}
+#Graph 7
+ggplot(hospital1%>%filter(raceethn!=9&raceethn!=''),aes(x=raceethn,fill=raceethn))+
+  geom_bar()
+#The top three ethnicities that received treatement at Rhode Island Hospitals were, in order: White, Hispanic, Black, where White was clearly the highest ethnicity.
+```
+```{r}
+#Graph 8
+ggplot(hospital1,aes(x=age,fill=sex))+
+  geom_density(position='dodge',alpha=0.5)
+#This graph shows the density of ages by sex. Many more women receive treatment around age 30 compared to men, most likely because of childbirth, and many more men receive treatment after age 50 coompared to women.
+```
+```{r}
+#Graph 9
+ggplot(hospital1%>%filter(admtype!=9),aes(x=admtype,y=tot,fill=sex))+
+  geom_bar(stat='identity',position='dodge')
+#Females entering treatment with emergency(1), newborn(4), or trauma(5) admission have paid higher total costs than men over the last four years, while men have paid higher total costs for urgent(2) and electric(3) admissions over the past four years.
+```
+```{r}
+#Graph 10
+ggplot(hospital1%>%filter(raceethn!=9&raceethn!=''),aes(x=sex,y=raceethn,fill=age))+
+  geom_tile()+
+  facet_wrap(~Expired,(nrows=2))
+#This graph is a heatmap of race and sex colored by mean age in each category and separated by the newly created Expired category. Overall, people who have "Expired" tend to be older than people who havent. Additionally, females tended to be older when they died than men, while men who remained living were older than the females who remained living. 
+```
+
+#Predictive Modeling
+##I am going to be predicting my created Expired variable, a binary variable on whether a patient has "expired" or died. THis is important to predict as doctors can try to help prevent some deaths knowing some of the signs from this dataset.
+```{r}
+#the variables used for each of the classification models will be age,sex,race,admtype, trandb, tot, and the newly created numdx and numpx variables. This combines demographic variables and basic treatment information such as costs of treatment and the number od diagnoses and prescriptions the patient might be dealing with. These variables combined with the Expired variable will be included in this new dataset used for modeling.
+modeldf<-hospital1%>%select(c(4,5,6,13,42,58,136:138))%>%filter(admtype!=9)
+#make the target variable a factor variable
+modeldf$Expired<-as.factor(modeldf$Expired)
+
+#Splitting the data
+set.seed(2019)
+splitIndex <- createDataPartition(modeldf$Expired, p = .70, list = FALSE)
+train <- modeldf[splitIndex,]
+test <- modeldf[-splitIndex,]
+#The expired variable is very imbalanced, so we are balacning the data before making the models.
+train0 = train[train$Expired == '0',]
+train1 = train[train$Expired == '1',]
+n0 = nrow(train0)
+n1 = nrow(train1)
+train00 = train0[sample(1:n0, n1),]
+train_under = rbind(train00, train1)
+#use train_under and test for models
+```
+```{r}
+#Model 1: K-Nearest Neighbors, tuning k: the number of neighbors
+myGrid = expand.grid(k=c(1:15))
+
+model <- train(Expired~.,data = train_under, method = "knn", tuneGrid = myGrid)
+
+pred  = predict(model, test)
+cm=confusionMatrix(pred, test$Expired, positive="1")
+print(cm$byClass['Balanced Accuracy'])
+```
+```{r}
+#Model 2: Boosted Logistic Regression, tuning nIter: number of Iterations
+myGrid = expand.grid(nIter=c(1:30))
+
+model <- train(Expired~.,data = train_under, method = "LogitBoost", tuneGrid = myGrid)
+
+pred  = predict(model, test)
+cm=confusionMatrix(pred, test$Expired, positive="1")
+print(cm$byClass['Balanced Accuracy'])
+
+```
+```{r}
+#Model 3: rpart2, tuning maxdepth
+myGrid = expand.grid(maxdepth=c(1:30))
+
+model <- train(Expired~.,data = train_under, method = "rpart2", tuneGrid = myGrid)
+
+pred  = predict(model, test)
+cm=confusionMatrix(pred, test$Expired, positive="1")
+print(cm$byClass['Balanced Accuracy'])
+
+```
+```{r}
+#Model 4: ranger, tuning `mtry`, `splitrule` and `min.node.size`
+myGrid = expand.grid(mtry = c(1:10), splitrule = c("gini"), min.node.size = c(1:10))
+
+model <- train(Expired~.,data = train_under, method = "ranger", tuneGrid = myGrid)
+
+pred  = predict(model, test)
+cm=confusionMatrix(pred, test$Expired, positive="1")
+print(cm$byClass['Balanced Accuracy'])
+```
+```{r}
+#Model 5: stepLDA, tuning maxvar and direction
+myGrid = expand.grid(maxvar=c(1:8),direction=c("both", "forward", "backward"))
+
+model <- train(Expired~.,data = train_under, method = "stepLDA", tuneGrid = myGrid)
+
+pred  = predict(model, test)
+cm=confusionMatrix(pred, test$Expired, positive="1")
+print(cm$byClass['Balanced Accuracy'])
+
+```
+
