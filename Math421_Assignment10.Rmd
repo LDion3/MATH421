@@ -190,6 +190,21 @@ model_df(types)
 # Set the searching range
 myGrid = expand.grid(mtry = c(1:2), splitrule = c("gini"),
                      min.node.size = c(1:2))
+```{r}
+# Set the searching range
+myGrid = expand.grid(mtry = c(1:2), splitrule = c("gini"),
+                     min.node.size = c(1:2))
+
+model <- train(Survived~.,data = train, method = "ranger", tuneGrid = myGrid)
+print(model)
+
+# Plot the tuning result
+plot(model)
+
+# Used the tuned model for prediction
+pred  = predict(model, test)
+pred
+```
 
 model <- train(target~.,data = train, method = "ranger", tuneGrid = myGrid)
 print(model)
