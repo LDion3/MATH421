@@ -205,6 +205,13 @@ Also, to decide where to split at each node, a tree in a forest only consider at
 
 The number of trees and the number of variables considered at each split are two of the most common parameters of random forest.  This following codes implement random forest using the `ranger` package. 
 
+```{r}
+#ada boost
+library(e1071)
+svm<=svm(Survived~.,data=train)
+
+```
+
 ```{r, eval=FALSE}
 # Building random forest using ranger
 
