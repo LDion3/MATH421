@@ -1,0 +1,315 @@
+---
+title: "Final Project"
+author: "Louis Dion"
+date: "12/2/2019"
+output: html_document
+runtime: shiny
+---
+## Upload packages
+```{r}
+library(shiny)
+```
+## Create User Interface for web app
+```{r}
+ui<-fluidPage(
+  h1('Final Project Web App'),
+  h2('Louis Dion'),
+  h3('Instructions: Upload your data file onto the app, then browse through the different panels to create plots and models.'),
+  tabsetPanel(
+    tabPanel(
+      title='Data',
+      h5('Instructions: Use this tab to upload the data you would like to use in the app. Browse your computer for the file below. For the other tabs to work, the file needs to be in csv form and free of missing data.'),
+      fileInput('file','Input your file here.', accept=".csv")
+    ),
+    tabPanel(
+      title='Plots',
+      h5('Instructions: Use this tab to visually explore the data you have uploaded. Use the sidebar to pick variables to use in the plots and the type of plots you would like to see.'),
+      sidebarLayout(
+        sidebarPanel(
+          selectInput('var1','Choose variable 1:',choices=''),
+          selectInput('var2','Choose variable 2:',choices=''),
+          selectInput('var3','Choose variable 3:',choices=''),
+          selectInput('graph_type','Type of Plot',choices = c('Bar','Heat Map','Density','Histogram','Boxplot','Scatter'))
+        ),
+        mainPanel(
+          plotOutput(outputId = 'main_plot')
+          
+        )
+      )
+    ),
+    tabPanel(
+      title = 'Models: Decision Tree',
+      h5('Instructions: Use this tab to begin creating predictive models from the data. Choose the target and independent variables for all of the models being used. The app is only designed to only function correctly with binary classification targets. Then, tune the hyperparameters for the Decision Tree model. View the results of the model on the right.'),
+      h6('Note: In the table, var1 refers to the predicted value of the target while var2 refers to the actual value of the target.'),
+      sidebarLayout(
+        sidebarPanel(
+          selectInput('target','Choose a target variable.',choices=c('')),
+          checkboxGroupInput('predictors','Choose the variables to predict the target.'),
+          sliderInput('DTparam','Max Depth of Decision Tree Model',value=4,min=1,max=7)
+        ),
+        mainPanel(
+          h3('Decision Tree Model'),
+          tableOutput(outputId = 'model_1')
+        )
+      )
+    ),
+    tabPanel(
+      title = 'Models: Ranger Model',
+      h5('Instructions: Use this tab to create the Ranger Model. The variables selected in the Decision Tree tab will be applied in this tab. Tune the hyperparameters of the Ranger, or Random Forest Model, on the left, and view the results on the right.'),
+      h6('Note: In the table, var1 refers to the predicted value of the target while var2 refers to the actual value of the target.'),
+      sidebarLayout(
+        sidebarPanel(
+          sliderInput('RANparam1','Number of variables per split',value=4,min=1,max=7),
+          sliderInput('RANparam2','Minimum node size',value=10,min=1,max=20)
+        ),
+        mainPanel(
+          h3('Ranger Model'),
+          tableOutput(outputId = 'model_2')
+        )
+      )
+    ),
+      tabPanel(
+      title = 'Models: K-Nearest Neighbors',
+      h5('Instructions: Use this tab to create the K-Nearest Neighbors Model. The variables selected in the Decision Tree tab will be applied in this tab. Tune the hyperparameters of the K-Nearest Neighbors on the left, and view the results on the right.'),
+      h6('Note: In the table, var1 refers to the predicted value of the target while var2 refers to the actual value of the target.'),
+      sidebarLayout(
+        sidebarPanel(
+          sliderInput('KNNparam','Number of neighbors',value=5,min=1,max=10)
+        ),
+        mainPanel(
+          h3('K-Nearest Neigbors Model'),
+          tableOutput('model_3')
+        )
+      )
+    ),
+    tabPanel(
+      title = 'Models: Boosted Logistic Regression',
+      h5('Instructions: Use this tab to create the Boosted Logistic Regression Model. The variables selected in the Decision Tree tab will be applied in this tab. Tune the hyperparameters of the Boosted Logistic Regression on the left, and view the results on the right.'),
+      h6('Note: In the table, var1 refers to the predicted value of the target while var2 refers to the actual value of the target.'),
+      sidebarLayout(
+        sidebarPanel(
+          sliderInput('BLRparam','Number of iterations',value=15,min=1,max=30)
+        ),
+        mainPanel(
+          h3('Boosted Logistic Regression Model'),
+          tableOutput('model_4')
+        )
+      )
+    )
+  )
+)
+ 
+```
+
+## Create Server for web app
+```{r}
+server<-function(input,output,session){
+  
+  #plotting
+  output$main_plot <- renderPlot ({
+    inFile = input$file
+    var1<-input$var1
+    data <- read.csv(inFile$datapath, header = TRUE) 
+    
+    var1 = input$var1
+    var2 = input$var2
+    var3 = input$var3
+    graph = input$graph_type
+    
+    if (graph=='Bar'){
+      library(ggplot2)
+      library(gridExtra)
+      
+      g1 = ggplot(data, aes(x = data[[var1]]))+
+        geom_bar(stat='identity',aes(y=data[[var3]]), position='dodge')+
+        labs(x = var1, y = var3)
+      
+      g2 = ggplot(data, aes(x = data[[var2]]))+
+        geom_bar(stat='identity',aes(y=data[[var3]]),position='dodge')+
+        labs(x = var2, y = var3)
+      
+      g = grid.arrange(g1, g2, nrow = 2)
+    }
+    
+    if (graph=='Heat Map'){
+      library(ggplot2)
+      
+      g = ggplot(data,aes(x=data[[var1]],y=data[[var2]],fill=data[[var3]]))+
+        geom_tile()+
+        labs(x=var1,y=var2,fill=var3)
+    }
+    
+    if (graph=='Density') {
+      library(ggplot2)
+      library(gridExtra)
+      
+      g1 = ggplot(data, aes(x = data[[var1]], color = as.factor(data[[var3]])))+
+        geom_density()+
+        labs(x = var1, color = var3)
+      
+      g2 = ggplot(data, aes(x = data[[var2]], color = as.factor(data[[var3]])))+
+        geom_density()+
+        labs(x = var2, color = var3)
+      
+      g = grid.arrange(g1, g2, nrow = 2)
+    }
+    
+    if (graph=='Histogram'){
+      library(ggplot2)
+      library(gridExtra)
+      
+      g1 = ggplot(data, aes(x = data[[var1]], col = as.factor(data[[var3]])))+
+        geom_histogram()+
+        labs(x = var1, col = var3)
+      
+      g2 = ggplot(data, aes(x = data[[var2]], col = as.factor(data[[var3]])))+
+        geom_histogram()+
+        labs(x = var2, col = var3)
+      
+      g = grid.arrange(g1, g2, nrow = 2)
+    }
+    
+    if (graph=='Boxplot'){
+      library(ggplot2)
+      library(gridExtra)
+      
+      g1 = ggplot(data, aes(y = data[[var1]], color = as.factor(data[[var3]])))+
+        geom_boxplot()+
+        labs(y = var1, color = var3)
+      
+      g2 = ggplot(data, aes(y = data[[var2]], color = as.factor(data[[var3]])))+
+        geom_boxplot()+
+        labs(y = var2, color = var3)
+      
+      g = grid.arrange(g1, g2, nrow = 2)
+    }
+    
+    if (graph=='Scatter'){
+      library(ggplot2)
+
+      g = ggplot(data, aes(x = data[[var1]], y = data[[var2]], color = as.factor(data[[var3]])))+
+            geom_point()+
+            labs(x = var1, y = var2, color = var3)
+      
+    }
+    return(g)
+  })
+  
+  #creating data for modeling
+  model_data <- reactive({
+    library(tidyverse)
+    inFile = input$file
+    data <- read_csv(inFile$datapath)
+    y = input$target
+    x = as.numeric(input$predictors)
+    m_data = cbind(data[,y], data[,x])
+    names(m_data)[1]='target'
+    m_data$target<-as.factor(m_data$target)
+    m_data
+  })
+  
+  #decision tree  
+  model_1_model<-reactive({
+    library(rpart)
+    model <- rpart(target ~., data = model_data(), method = "class", control = rpart.control(maxdepth = input$DTparam))
+    pred<-predict(model,model_data())
+    pred<-round(pred)
+    d<-cbind(pred,model_data())
+    cm_d<-data.frame(predict=as.vector(d[,2]),actual=as.vector(d[,3]))
+  })
+  
+  output$model_1 <- renderTable({
+    t<-table(model_1_model()$predict,model_1_model()$actual)
+  })
+  
+  #ranger model
+  model_2_model<-reactive({
+    library(caret)
+    library(e1071)
+    library(ranger)
+    myGrid = expand.grid(mtry=c(input$RANparam1),splitrule='gini',min.node.size=c(input$RANparam2))
+    model <- train(target~.,data = model_data(), method = "ranger", tuneGrid = myGrid)
+    pred<-predict(model,model_data())
+    d<-cbind(pred,model_data())
+    cm_d<-data.frame(predict=as.vector(d[,1]),actual=as.vector(d[,2]))
+  })
+  
+  output$model_2 <- renderTable({
+    t<-table(model_2_model()$predict,model_2_model()$actual)
+  })
+  
+  #knn model
+  model_3_model<-reactive({
+    library(caret)
+    myGrid = expand.grid(k=c(input$KNNparam))
+    model <- train(target~.,data = model_data(), method = "knn", tuneGrid = myGrid)
+    pred<-predict(model,model_data())
+    d<-cbind(pred,model_data())
+    cm_d<-data.frame(predict=as.vector(d[,1]),actual=as.vector(d[,2]))
+  })
+  
+  output$model_3 <- renderTable({
+    t<-table(model_3_model()$predict,model_3_model()$actual)
+  })
+  
+  #Boosted Logistic Regression model
+  model_4_model<-reactive({
+    library(caret)
+    library(caTools)
+    myGrid = expand.grid(nIter=c(input$BLRparam))
+    model <- train(target~.,data = model_data(), method = "LogitBoost", tuneGrid = myGrid)
+    pred<-predict(model,model_data())
+    d<-cbind(pred,model_data())
+    cm_d<-data.frame(predict=as.vector(d[,1]),actual=as.vector(d[,2]))
+  })
+  
+  output$model_4 <- renderTable({
+    t<-table(model_4_model()$predict,model_4_model()$actual)
+  })
+  
+  
+  observeEvent(input$file,{ 
+    inFile = input$file
+    data <- read.csv(inFile$datapath, header = TRUE)   
+               updateSelectInput(session, 'var1', choices = names(data))}
+               )
+  
+  observeEvent(input$file,{ 
+    inFile = input$file
+    data <- read.csv(inFile$datapath, header = TRUE)   
+    updateSelectInput(session, 'var2', choices = names(data))}
+  )
+  
+  observeEvent(input$file,{ 
+    inFile = input$file
+    data <- read.csv(inFile$datapath, header = TRUE)   
+    updateSelectInput(session, 'var3', choices = names(data))}
+  )
+  
+  observeEvent(input$file,{ 
+    inFile = input$file
+    data <- read.csv(inFile$datapath, header = TRUE)   
+    updateSelectInput(session, 'target', choices = names(data))}
+  )
+  
+  observeEvent(input$file,{ 
+    inFile = input$file
+    data <- read.csv(inFile$datapath, header = TRUE) 
+    choices = as.list(c(1:ncol(data)))
+    names(choices)= names(data)
+    updateCheckboxGroupInput(session, 'predictors', choices = choices)}
+  )
+
+  
+}
+```
+## Create
+```{r}
+shinyApp(ui=ui,server=server)
+```
+
+
+
+
+
+
